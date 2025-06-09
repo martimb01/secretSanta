@@ -1,7 +1,6 @@
 import User from "../models/User"
 import bcrypt from 'bcrypt'
 import { IUser } from "../types.ts/User"
-import { isValidObjectId } from "mongoose"
 
 export const createUser = async (req: any, res: any) => {
     try {
