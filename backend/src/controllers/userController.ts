@@ -7,28 +7,18 @@ export const createUser = async (req: any, res: any) => {
     try {
         const user = new User (req.body)
 
-        //Check if any of the req.body fields are empty
-        if (!user.username || !user.firstName || !user.lastName
-        || !user.password || !user.email || !user.dateOfBirth)
-        {
-            res.status(400).json({message: "CONTROLLER - Field is empty!"})
-        }
-        
-        //Check if the username is already in use
-        if (await User.findOne({username: user.username})) {
-            res.status(400).json({message:'CONTROLLER - Username already in use!'})
-        }
-
         //Check constraints
-        const constraintError = validateUserConstraints(user)
+        const constraintError = await validateUserConstraints(user)
         if (constraintError) {
             res.status(400).json({message: constraintError})
+            return
         }
 
         //Hash password
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt)
         
+        //Save User to DB
         user.save()
         res.status(200).json({message: "CONTROLLER - User created!"})
         
@@ -41,16 +31,40 @@ export const createUser = async (req: any, res: any) => {
 
 
 //Validate User Constraints
+async function validateUserConstraints(user: IUser) {
 
-function validateUserConstraints(user: IUser) {
+    // 1 - Check if any of the req.body fields are empty
+    if (!user.username || !user.firstName || !user.lastName
+        || !user.password || !user.email || !user.dateOfBirth)
+    {
+        return "CONTROLLER - Field is empty!"
+    }
+
+    // 2 - Password and username length
     if (user.username.length < 5) {
-        return "Username is too short!";
+        return "CONTROLLER - Username is too short!";
     }
     if (user.password.length < 5) {
-        return "Password is too short!";
+        return "CONTROLLER - Password is too short!";
     }
-    // Add more checks as needed
 
+    // 3 - Check if the username is already in use
+    if (await User.findOne({username: user.username})) {
+        return 'CONTROLLER - Username already in use!'
+    }
+
+    // 4 - Proper email regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(user.email)) {
+        return 'CONTROLLER - Invalid email!'
+    }
+
+    // 5 - Check if email is already in use
+    const emailAlreadyUsed = await User.findOne({email: user.email})
+    if (emailAlreadyUsed) {
+        return 'CONTROLLER - Email is already in use!'
+    }
+    
     return null; 
 }
 
