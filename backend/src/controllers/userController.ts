@@ -1,5 +1,7 @@
 import User from "../models/User"
 import bcrypt from 'bcrypt'
+import { IUser } from "../types.ts/User"
+import { isValidObjectId } from "mongoose"
 
 export const createUser = async (req: any, res: any) => {
     try {
@@ -16,6 +18,16 @@ export const createUser = async (req: any, res: any) => {
         if (await User.findOne({username: user.username})) {
             res.status(400).json({message:'CONTROLLER - Username already in use!'})
         }
+
+        //Check constraints
+        const constraintError = validateUserConstraints(user)
+        if (constraintError) {
+            res.status(400).json({message: constraintError})
+        }
+
+        //Hash password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt)
         
         user.save()
         res.status(200).json({message: "CONTROLLER - User created!"})
@@ -26,6 +38,21 @@ export const createUser = async (req: any, res: any) => {
     }
 }
 
+
+
+//Validate User Constraints
+
+function validateUserConstraints(user: IUser) {
+    if (user.username.length < 5) {
+        return "Username is too short!";
+    }
+    if (user.password.length < 5) {
+        return "Password is too short!";
+    }
+    // Add more checks as needed
+
+    return null; 
+}
 
 
 
